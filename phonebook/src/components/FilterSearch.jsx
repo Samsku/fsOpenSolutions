@@ -1,9 +1,7 @@
-const FilterSearch = ({search, onChange}) => {
-    return (
-        <div>
-            Search <input type="text" onChange={onChange} value={search} />
-        </div>
-    )
-}
+const FilterSearch = ({ search, onChange }) => (
+    <div>
+        Search: <input value={search} onChange={onChange} />
+    </div>
+);
 
 export default FilterSearch;
