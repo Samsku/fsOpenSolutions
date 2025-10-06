@@ -4,11 +4,20 @@ import FilterSearch from './components/FilterSearch';
 import PersonForm from './components/PersonForm';
 import NumbersDisplay from './components/NumbersDisplay';
 
+const Notification = ({ message, error }) => {
+    if (!message && !error) return null;
+    return (
+        <div className={error ? "error" : "notification"}>{error || message}</div>
+    )
+};
+
 const App = () => {
     const [persons, setPersons] = useState([]);
     const [newName, setNewName] = useState('');
     const [newNumber, setNewNumber] = useState('');
     const [search, setSearch] = useState('');
+    const [message, setMessage] = useState('');
+    const [error, setError] = useState(null);
 
     // Load initial data
     useEffect(() => {
@@ -23,10 +32,12 @@ const App = () => {
         const existingPerson = persons.find(p => p.name === newName);
 
         if (existingPerson) {
-            const updatedPerson = { ...existingPerson, number: newNumber };
-            axios.put(`http://localhost:3001/persons/${existingPerson.id}`, updatedPerson)
+            axios.put(`http://localhost:3001/persons/${existingPerson.id}`, { number: newNumber })
                 .then(res => setPersons(persons.map(p => p.id !== existingPerson.id ? p : res.data)))
-                .catch(err => console.error(err));
+                .catch(() => {
+                    setError(`Person with name ${newName} already exists`);
+                    setTimeout(() => setError(''), 5000);
+                });
         } else {
             const newPerson = { name: newName, number: newNumber };
             axios.post('http://localhost:3001/persons', newPerson)
@@ -34,19 +45,31 @@ const App = () => {
                 .catch(err => console.error(err));
         }
 
+        setMessage(`Added ${newName}`);
+        setTimeout(() => setMessage(''), 5000);
+
         setNewName('');
         setNewNumber('');
+
     };
 
     // Delete person
     const deletePerson = (id) => {
         const person = persons.find(p => p.id === id);
-        if (!person) return;
+        if (!person) {
+            setError(`Person with name ${person.name} not found`);
+            setTimeout(() => setError(''), 5000);
+            return;
+        }
 
         if (window.confirm(`Delete ${person.name}?`)) {
             axios.delete(`http://localhost:3001/persons/${id}`)
                 .then(() => setPersons(persons.filter(p => p.id !== id)))
-                .catch(err => console.error(err));
+                .catch(() => {
+                    setError(`Person with name ${person.name} not found`);
+                    setTimeout(() => setError(''), 5000);
+                    setPersons(persons.filter(p => p.id !== id));
+                });
         }
     };
 
@@ -60,7 +83,8 @@ const App = () => {
 
     return (
         <div>
-            <h2>Phonebook</h2>
+            <h1>Phonebook</h1>
+            <Notification message={message} error={error} />
             <FilterSearch search={search} onChange={handleSearchChange} />
             <PersonForm
                 addPerson={addPerson}
