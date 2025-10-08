@@ -1,63 +1,84 @@
 import express from "express";
-import fs from "fs";
 import cors from "cors";
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-const readDb = () => JSON.parse(fs.readFileSync("db.json", "utf-8"));
-const writeDb = data => fs.writeFileSync("db.json", JSON.stringify(data, null, 2));
 
 const PORT = 3001;
 
+let persons = [
+    {
+        "id": "1",
+        "name": "Arto Hellas",
+        "number": "040-123456"
+    },
+    {
+        "id": "2",
+        "name": "Ada Lovelace",
+        "number": "39-44-5323523"
+    },
+    {
+        "id": "3",
+        "name": "Dan Abramov",
+        "number": "12-43-234345"
+    },
+    {
+        "id": "4",
+        "name": "Mary Poppendieck",
+        "number": "39-23-6423122"
+    }
+]
+
 // Get all contacts
-app.get("/persons", (req, res) => {
-    const db = readDb();
-    res.json(db.persons);
+app.get("/api/persons", (req, res) => {
+    res.json(persons)
 });
 
-// Add new contact
-app.post("/persons", (req, res) => {
-    const { name, number } = req.body;
-    if (!name || !number) return res.status(400).json({ error: "Name or number missing!" });
+app.get("/info", (req, res) => {
+    const date = new Date();
+    const count = persons.length;
+    res.send(`<p>Phonebook has info for ${count} people</p><p>${date}</p>`)
+})
 
-    const db = readDb();
-    const newPerson = { name, number, id: Date.now().toString() };
+app.get("/api/persons/:id", (req, res) => {
+    const id = req.params.id;
+    const person = persons.find(person => person.id === id);
+    if (person) {
+        return res.json(person)
+    }
+    res.status(404).end();
+})
 
-    db.persons.push(newPerson);
-    writeDb(db);
+app.post("/api/persons", (req, res) => {
+    const body = req.body;
+    if (!body.name) {
+        return res.status(400).json({error: "Name is missing"})
+    }
+    if (!body.number) {
+        return res.status(400).json({error: "Number is missing"})
+    }
 
-    res.status(201).json(newPerson);
-});
+    const personExists = persons.find(person => person.name === body.name);
+    if (personExists) {
+        return res.status(400).json({error: "Person exists"})
+    }
 
-// Update number
-app.put("/persons/:id", (req, res) => {
-    const { id } = req.params;
-    const { number } = req.body;
+    const person = {
+        id: Math.floor(Math.random() * 1000000),
+        name: body.name,
+        number: body.number
+    }
 
-    const db = readDb();
-    const person = db.persons.find(p => p.id === id);
-    if (!person) return res.status(404).json({ error: "Person not found" });
+    persons = persons.concat(person);
+    res.json(person);
+})
 
-    person.number = number;
-    writeDb(db);
-
-    res.status(200).json(person);
-});
-
-// Delete person
-app.delete("/persons/:id", (req, res) => {
-    const { id } = req.params;
-
-    const db = readDb();
-    const person = db.persons.find(p => p.id === id);
-    if (!person) return res.status(404).json({ error: "Person not found" });
-
-    db.persons = db.persons.filter(p => p.id !== id);
-    writeDb(db);
-
+app.delete("/api/persons/:id", (req, res) => {
+    const id = req.params.id;
+    persons = persons.filter(person => person.id !== id);
     res.status(204).end();
-});
+})
 
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
